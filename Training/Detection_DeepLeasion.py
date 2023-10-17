@@ -45,48 +45,6 @@ def read_csv_gt(csv_dir):
 		gt_list.append([volume_name, slice_index, y1, x1, y2, x2, lesion_type])
 	return gt_list
 
-class DeepLesion2(torch.utils.data.Dataset):
-    def __init__(self, root, gt_csv, transforms):
-        self.root = root
-        self.transforms = transforms
-        self.gt_csv = gt_csv
-        self.imgs = list(sorted(os.listdir(root)))
-        self.gt_annotations = read_csv_gt(gt_csv)
-
-    def __getitem__(self, idx):
-        # load images and masks
-        img_path = os.path.join(self.root, self.imgs[idx])
-        image_filename = img_path.split('/')[-1][:-4]
-        img = np.load(img_path)
-        img = np.clip(img, -1024, 3071)
-        img = ((img+1024)/(3071+1024))*255.0
-        img = Image.fromarray(img.astype('uint8'),'RGB')
-        metaData = image_filename.split('_')
-        lesionType = int(metaData[5])
-        boxes = []
-        boxes.append([float(metaData[7]), float(metaData[9]), float(metaData[11]), float(metaData[13])])
-        boxes = torch.as_tensor(boxes, dtype=torch.float32)
-        labels = torch.ones((1,), dtype=torch.int64)
-        image_id = torch.tensor([idx])
-        area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
-        iscrowd = torch.zeros((1,), dtype=torch.int64)
-        target = {}
-        target["boxes"] = boxes
-        target["labels"] = labels
-        target["image_id"] = image_id
-        target["area"] = area
-        target["iscrowd"] = iscrowd
-        # print(type(img))
-        # input('#####')
-        # draw = ImageDraw.Draw(img)
-        # draw.rectangle((target["boxes"][0][0], target["boxes"][0][1], target["boxes"][0][2], target["boxes"][0][3]), outline='red')
-        # img.show()
-        if self.transforms is not None:
-            img, target = self.transforms(img, target)
-
-        return img, target
-    
-
 class DeepLesion(torch.utils.data.Dataset):
     def __init__(self, root, transforms):
         self.root = root
